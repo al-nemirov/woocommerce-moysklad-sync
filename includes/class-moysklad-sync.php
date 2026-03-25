@@ -339,6 +339,7 @@ class WC_MoySklad_Sync {
 		$body = array(
 			'name'         => 'WC-' . $order_number,
 			'applicable'   => false,
+			'vatEnabled'   => false,
 			'agent'        => array( 'meta' => $agent_meta ),
 			'organization' => array( 'meta' => $org_meta ),
 			'description'  => sprintf(
@@ -575,8 +576,8 @@ class WC_MoySklad_Sync {
 	}
 
 	private static function price_to_cents( $price ) {
-		// МойСклад (customerorder.positions.price): Float, цена в копейках.
-		return (float) (int) round( (float) $price * 100 );
+		// МойСклад positions.price: Integer (Long), цена в копейках.
+		return (int) round( (float) $price * 100 );
 	}
 
 	/**
@@ -716,6 +717,15 @@ class WC_MoySklad_Sync {
 	}
 
 	public static function handle_webhook( $request ) {
+		// Проверка секрета (query param ?secret=...)
+		$secret = get_option( self::OPT_WEBHOOK_SECRET, '' );
+		if ( $secret !== '' ) {
+			$provided = $request->get_param( 'secret' );
+			if ( $provided !== $secret ) {
+				return new WP_REST_Response( array( 'error' => 'Invalid secret' ), 403 );
+			}
+		}
+
 		$body = $request->get_json_params();
 		if ( empty( $body['events'] ) || ! is_array( $body['events'] ) ) {
 			return new WP_REST_Response( array( 'ok' => true ), 200 );
@@ -1171,7 +1181,11 @@ class WC_MoySklad_Sync {
 		$api = self::api();
 
 		if ( $action === 'create' ) {
-			$url    = rest_url( 'moysklad/v1/webhook' );
+			// Генерируем секрет для защиты endpoint
+			$secret = wp_generate_password( 32, false );
+			update_option( self::OPT_WEBHOOK_SECRET, $secret );
+
+			$url    = rest_url( 'moysklad/v1/webhook' ) . '?secret=' . $secret;
 			$result = $api->create_webhook( $url, 'customerorder', 'UPDATE' );
 			if ( is_wp_error( $result ) ) {
 				echo '<div class="notice notice-error"><p>Ошибка: ' . esc_html( $result->get_error_message() ) . '</p></div>';

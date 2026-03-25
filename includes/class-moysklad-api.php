@@ -33,20 +33,33 @@ class WC_MS_API {
 		return $this->request( 'POST', self::BASE . $endpoint, $body );
 	}
 
-	public function put( $endpoint, $body ) {
-		return $this->request( 'PUT', self::BASE . $endpoint, $body );
+	/**
+	 * PUT-запрос. $disable_webhooks = true добавляет заголовок X-Lognex-WebHook-Disable
+	 * чтобы МС не стрелял вебхуком обратно (защита от цикла WC→MS→webhook→WC).
+	 */
+	public function put( $endpoint, $body, $disable_webhooks = false ) {
+		$extra_headers = array();
+		if ( $disable_webhooks ) {
+			$extra_headers['X-Lognex-WebHook-Disable'] = 'true';
+		}
+		return $this->request( 'PUT', self::BASE . $endpoint, $body, $extra_headers );
 	}
 
-	private function request( $method, $url, $body = null ) {
+	private function request( $method, $url, $body = null, $extra_headers = array() ) {
+		$headers = array(
+			'Authorization'   => 'Basic ' . $this->auth,
+			'Content-Type'    => 'application/json',
+			'Accept'          => 'application/json',
+			'Accept-Encoding' => 'gzip',
+		);
+		if ( $extra_headers ) {
+			$headers = array_merge( $headers, $extra_headers );
+		}
+
 		$args = array(
 			'method'  => $method,
 			'timeout' => 30,
-			'headers' => array(
-				'Authorization'   => 'Basic ' . $this->auth,
-				'Content-Type'    => 'application/json',
-				'Accept'          => 'application/json',
-				'Accept-Encoding' => 'gzip',
-			),
+			'headers' => $headers,
 		);
 		if ( $body !== null ) {
 			$args['body'] = wp_json_encode( $body );
@@ -70,6 +83,22 @@ class WC_MS_API {
 
 		if ( $this->debug ) {
 			$this->log( sprintf( 'API RESPONSE %s | status=%d', $url, $code ) );
+		}
+
+		// Rate limit — retry once after delay
+		if ( $code === 429 ) {
+			$retry_after = (int) wp_remote_retrieve_header( $response, 'X-Lognex-Retry-After' );
+			if ( $retry_after < 1 ) {
+				$retry_after = 3;
+			}
+			if ( $retry_after > 30 ) {
+				$retry_after = 30;
+			}
+			if ( $this->debug ) {
+				$this->log( sprintf( 'Rate limited, retrying in %d sec', $retry_after ) );
+			}
+			sleep( $retry_after );
+			return $this->request( $method, $url, $body, $extra_headers );
 		}
 
 		if ( $code >= 400 ) {
@@ -181,8 +210,8 @@ class WC_MS_API {
 	 * @param array  $body
 	 * @return array|WP_Error
 	 */
-	public function update_customer_order( $id, array $body ) {
-		return $this->put( 'entity/customerorder/' . $id, $body );
+	public function update_customer_order( $id, array $body, $disable_webhooks = true ) {
+		return $this->put( 'entity/customerorder/' . $id, $body, $disable_webhooks );
 	}
 
 	/* ── Вебхуки ────────────────────────────────────────────── */
