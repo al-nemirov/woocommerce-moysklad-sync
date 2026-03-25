@@ -25,6 +25,7 @@ class WC_MoySklad_Sync {
 	const OPT_WEBHOOK_SECRET = 'wc_ms_webhook_secret';
 	const OPT_DEBUG          = 'wc_ms_debug';
 	const OPT_ADD_SHIPPING   = 'wc_ms_add_shipping';
+	const OPT_RESERVE_ON_CREATE = 'wc_ms_reserve_on_create';
 	const OPT_NOTE_LABEL     = 'wc_ms_note_label';
 
 	const ORDER_META_ID    = 'wc_ms_order_id';
@@ -235,18 +236,41 @@ class WC_MoySklad_Sync {
 		if ( get_option( self::OPT_ENABLED, '0' ) !== '1' ) {
 			return;
 		}
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+		$ms_id = $order->get_meta( self::ORDER_META_ID ) ?: $order->get_meta( 'yd_moysklad_id' );
+
+		// Если заказ уже есть в МойСклад — обновляем его state при каждом изменении статуса WC.
+		if ( $ms_id ) {
+			$status_map = get_option( self::OPT_STATUS_MAP, array() );
+			if ( empty( $status_map ) || ! is_array( $status_map ) ) {
+				return;
+			}
+
+			// Маппинг хранится как: ms_state_id => wc_status.
+			// Инвертируем: wc_status => ms_state_id.
+			$wc_to_ms = array();
+			foreach ( $status_map as $ms_state_id => $wc_status ) {
+				if ( is_string( $ms_state_id ) && $ms_state_id !== '' && is_string( $wc_status ) && $wc_status !== '' ) {
+					$wc_to_ms[ $wc_status ] = $ms_state_id;
+				}
+			}
+
+			if ( isset( $wc_to_ms[ $new_status ] ) && $wc_to_ms[ $new_status ] !== '' ) {
+				self::update_ms_order_state( $order, (string) $ms_id, (string) $wc_to_ms[ $new_status ] );
+			}
+			return;
+		}
+
+		// Если заказа в МойСклад ещё нет — отправляем только при совпадении с настройкой.
 		$send_on       = get_option( self::OPT_SEND_ON_STATUS, 'wc-processing' );
 		$send_on_clean = ( strpos( $send_on, 'wc-' ) === 0 ) ? substr( $send_on, 3 ) : $send_on;
 		if ( $new_status !== $send_on && $new_status !== $send_on_clean ) {
 			return;
 		}
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return;
-		}
-		if ( $order->get_meta( self::ORDER_META_ID ) || $order->get_meta( 'yd_moysklad_id' ) ) {
-			return;
-		}
+
 		self::sync_order( $order );
 	}
 
@@ -297,11 +321,16 @@ class WC_MoySklad_Sync {
 		if ( get_option( self::OPT_ADD_SHIPPING, '0' ) === '1' ) {
 			$shipping_total = (float) $order->get_shipping_total() + (float) $order->get_shipping_tax();
 			if ( $shipping_total > 0 ) {
+				$reserve_on_create = get_option( self::OPT_RESERVE_ON_CREATE, '0' ) === '1';
 				$positions[] = array(
 					'quantity'   => 1,
 					'price'      => self::price_to_cents( $shipping_total ),
 					'assortment' => array( 'meta' => self::make_meta( 'entity/service/' . get_option( 'wc_ms_shipping_service_id', '' ), 'service' ) ),
+					'reserve'    => $reserve_on_create ? 1 : null,
 				);
+				if ( $reserve_on_create === false ) {
+					unset( $positions[ count( $positions ) - 1 ]['reserve'] );
+				}
 			}
 		}
 
@@ -362,6 +391,171 @@ class WC_MoySklad_Sync {
 		$order->save();
 	}
 
+	/* ── Тесты (для отладки шагов синхронизации) ───────────────── */
+
+	private static function run_test_action( $action ) {
+		switch ( $action ) {
+			case 'connection':
+				return (string) self::test_step_connection();
+			case 'entities':
+				return (string) self::test_step_entities();
+			case 'create_draft_roundtrip':
+				return (string) self::test_step_create_draft_roundtrip();
+			default:
+				return new WP_Error( 'wc_ms_test_unknown', 'Неизвестный тест.' );
+		}
+	}
+
+	private static function test_step_connection() {
+		$api = self::api();
+		if ( ! $api ) {
+			return new WP_Error( 'wc_ms_test_api', 'API не инициализировано.' );
+		}
+		$res = $api->test_connection();
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		return 'Подключение к МойСклад: OK';
+	}
+
+	private static function test_step_entities() {
+		$api = self::api();
+		if ( ! $api ) {
+			return new WP_Error( 'wc_ms_test_api', 'API не инициализировано.' );
+		}
+
+		$orgs   = $api->get_organizations();
+		$stores = $api->get_stores();
+		$states = $api->get_order_states();
+
+		if ( is_wp_error( $orgs ) ) {
+			return $orgs;
+		}
+		if ( is_wp_error( $stores ) ) {
+			return $stores;
+		}
+		if ( is_wp_error( $states ) ) {
+			return $states;
+		}
+
+		return sprintf(
+			'Данные загружены: orgs=%d, stores=%d, states=%d',
+			count( $orgs ),
+			count( $stores ),
+			count( $states )
+		);
+	}
+
+	private static function test_step_create_draft_roundtrip() {
+		$api = self::api();
+		if ( ! $api ) {
+			return new WP_Error( 'wc_ms_test_api', 'API не инициализировано.' );
+		}
+
+		$default_prod = get_option( self::OPT_DEFAULT_PROD, '' );
+		if ( empty( $default_prod ) ) {
+			return new WP_Error( 'wc_ms_test_no_product', 'Не задан Товар-заглушка (UUID) в настройках.' );
+		}
+
+		// Организация
+		$org_id = get_option( self::OPT_ORG_ID, '' );
+		if ( $org_id ) {
+			$org_meta = self::make_meta( 'entity/organization/' . $org_id, 'organization' );
+		} else {
+			$orgs = $api->get_organizations();
+			if ( is_wp_error( $orgs ) || empty( $orgs[0]['meta'] ) ) {
+				return new WP_Error( 'wc_ms_test_org', 'Не удалось получить организацию.' );
+			}
+			$org_meta = $orgs[0]['meta'];
+		}
+
+		// Статусы: возьмём initial + следующий
+		$states = $api->get_order_states();
+		if ( is_wp_error( $states ) || empty( $states ) ) {
+			return new WP_Error( 'wc_ms_test_states', 'Не удалось получить статусы customerorder.' );
+		}
+
+		$initial_state_id = get_option( self::OPT_MS_STATE_ID, '' );
+		if ( empty( $initial_state_id ) ) {
+			$initial_state_id = (string) $states[0]['id'];
+		}
+		$next_state_id = '';
+		foreach ( $states as $st ) {
+			if ( isset( $st['id'] ) && (string) $st['id'] !== '' && (string) $st['id'] !== (string) $initial_state_id ) {
+				$next_state_id = (string) $st['id'];
+				break;
+			}
+		}
+		if ( empty( $next_state_id ) ) {
+			return new WP_Error( 'wc_ms_test_states_next', 'Не найден следующий state для roundtrip.' );
+		}
+
+		// Контрагент: создаём уникального тестового
+		$ts    = time();
+		$email = 'wc-ms-test-' . $ts . '@example.com';
+		$phone = '';
+		$name  = 'WC-MS TEST ' . $ts;
+
+		$agent = $api->create_counterparty( $name, $email, $phone );
+		if ( is_wp_error( $agent ) || empty( $agent['meta'] ) ) {
+			return new WP_Error( 'wc_ms_test_agent', 'Не удалось создать тестового контрагента.' );
+		}
+		$agent_meta = $agent['meta'];
+
+		// Позиции: 1 товар по заглушке
+		$reserve_on_create = get_option( self::OPT_RESERVE_ON_CREATE, '0' ) === '1';
+		$price_kop         = self::price_to_cents( 100.0 ); // 100.00 RUB -> 10000 коп.
+
+		$positions = array(
+			array(
+				'quantity'   => 1,
+				'price'      => $price_kop,
+				'assortment' => array( 'meta' => self::make_meta( 'entity/product/' . $default_prod, 'product' ) ),
+			),
+		);
+		if ( $reserve_on_create ) {
+			$positions[0]['reserve'] = 1;
+		}
+
+		$body = array(
+			'name'         => 'WC-MS-TEST-' . $ts,
+			'applicable'   => false,
+			'agent'        => array( 'meta' => $agent_meta ),
+			'organization' => array( 'meta' => $org_meta ),
+			'description'  => 'Тест: создание черновика customerorder и смена state.',
+			'positions'    => $positions,
+		);
+
+		$store_id = get_option( self::OPT_STORE_ID, '' );
+		if ( $store_id ) {
+			$body['store'] = array( 'meta' => self::make_meta( 'entity/store/' . $store_id, 'store' ) );
+		}
+
+		$body['state'] = array(
+			'meta' => self::make_meta(
+				'entity/customerorder/metadata/states/' . $initial_state_id,
+				'state'
+			),
+		);
+
+		$created = $api->create_customer_order( $body );
+		if ( is_wp_error( $created ) || empty( $created['id'] ) ) {
+			return is_wp_error( $created ) ? $created : new WP_Error( 'wc_ms_test_create', 'Не удалось создать customerorder.' );
+		}
+		$ms_id = (string) $created['id'];
+
+		$updated = $api->update_customer_order( $ms_id, array(
+			'state' => array(
+				'meta' => self::make_meta( 'entity/customerorder/metadata/states/' . $next_state_id, 'state' ),
+			),
+		) );
+		if ( is_wp_error( $updated ) ) {
+			return new WP_Error( 'wc_ms_test_update', 'Создал, но не смог обновить state: ' . $updated->get_error_message() );
+		}
+
+		return 'Тест OK: создан customerorder=' . $ms_id . ' и updated state.';
+	}
+
 	/* ── Хелперы ───────────────────────────────────────────── */
 
 	private static function set_error( $order, $msg ) {
@@ -381,7 +575,54 @@ class WC_MoySklad_Sync {
 	}
 
 	private static function price_to_cents( $price ) {
-		return (int) round( (float) $price * 100 );
+		// МойСклад (customerorder.positions.price): Float, цена в копейках.
+		return (float) (int) round( (float) $price * 100 );
+	}
+
+	/**
+	 * Обновить state в МойСклад для уже созданного customerorder.
+	 *
+	 * @param WC_Order $order
+	 * @param string   $ms_id
+	 * @param string   $ms_state_id
+	 */
+	private static function update_ms_order_state( $order, $ms_id, $ms_state_id ) {
+		$api = self::api();
+		if ( ! $api ) {
+			return;
+		}
+
+		// Защита от лишних PUT (и потенциального “WC→MS→webhook→WC” цикла).
+		$current = $api->get_customer_order( $ms_id );
+		if ( ! is_wp_error( $current ) && isset( $current['state']['meta']['href'] ) ) {
+			$current_href = (string) $current['state']['meta']['href'];
+			$current_id   = basename( $current_href );
+			if ( $current_id !== '' && $current_id === (string) $ms_state_id ) {
+				return;
+			}
+		}
+
+		$body = array(
+			'state' => array(
+				'meta' => self::make_meta(
+					'entity/customerorder/metadata/states/' . $ms_state_id,
+					'state'
+				),
+			),
+		);
+
+		$result = $api->update_customer_order( $ms_id, $body );
+		if ( is_wp_error( $result ) ) {
+			self::set_error( $order, 'Не удалось обновить state в МойСклад: ' . $result->get_error_message() );
+			return;
+		}
+
+		$order->add_order_note( sprintf(
+			'%s: Обновлён state в МойСклад (customerorder %s) → %s',
+			get_option( self::OPT_NOTE_LABEL, 'МойСклад' ),
+			$ms_id,
+			$ms_state_id
+		) );
 	}
 
 	private static function get_or_create_counterparty( $order, $api ) {
@@ -419,6 +660,7 @@ class WC_MoySklad_Sync {
 	private static function build_positions( $order, $api ) {
 		$positions          = array();
 		$default_product_id = get_option( self::OPT_DEFAULT_PROD, '' );
+		$reserve_on_create  = get_option( self::OPT_RESERVE_ON_CREATE, '0' ) === '1';
 
 		foreach ( $order->get_items() as $item ) {
 			if ( ! $item->is_type( 'line_item' ) ) {
@@ -452,6 +694,9 @@ class WC_MoySklad_Sync {
 				'price'      => $price,
 				'assortment' => array( 'meta' => $meta ),
 			);
+			if ( $reserve_on_create ) {
+				$positions[ count( $positions ) - 1 ]['reserve'] = $quantity;
+			}
 		}
 
 		if ( empty( $positions ) ) {
@@ -652,10 +897,26 @@ class WC_MoySklad_Sync {
 			return;
 		}
 
+		$test_notice_html = '';
+
 		// Сохранение
 		if ( isset( $_POST['wc_ms_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['wc_ms_nonce'] ) ), 'wc_ms_save' ) ) {
 			self::save_settings();
 			echo '<div class="notice notice-success"><p>Настройки сохранены.</p></div>';
+		}
+
+		// Тесты
+		if ( isset( $_POST['wc_ms_test_action'] ) && isset( $_POST['wc_ms_nonce'] ) ) {
+			$nonce_ok = wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['wc_ms_nonce'] ) ), 'wc_ms_save' );
+			if ( $nonce_ok ) {
+				$action = sanitize_text_field( wp_unslash( $_POST['wc_ms_test_action'] ) );
+				$res    = self::run_test_action( $action );
+				if ( is_wp_error( $res ) ) {
+					$test_notice_html = '<div class="notice notice-error"><p>' . esc_html( $res->get_error_message() ) . '</p></div>';
+				} else {
+					$test_notice_html = '<div class="notice notice-success"><p>' . esc_html( (string) $res ) . '</p></div>';
+				}
+			}
 		}
 
 		// Управление вебхуком
@@ -673,6 +934,7 @@ class WC_MoySklad_Sync {
 		$default_prod = get_option( self::OPT_DEFAULT_PROD, '' );
 		$debug        = get_option( self::OPT_DEBUG, '0' );
 		$add_shipping = get_option( self::OPT_ADD_SHIPPING, '0' );
+		$reserve_on_create = get_option( self::OPT_RESERVE_ON_CREATE, '0' );
 		$note_label   = get_option( self::OPT_NOTE_LABEL, 'МойСклад' );
 		$status_map   = get_option( self::OPT_STATUS_MAP, array() );
 		$wh_active    = get_option( self::OPT_WEBHOOK_ACTIVE, '0' );
@@ -684,6 +946,7 @@ class WC_MoySklad_Sync {
 		<div class="wrap">
 			<h1>МойСклад — Синхронизация заказов</h1>
 			<p>Заказы WooCommerce автоматически передаются в МойСклад как заказы покупателя (черновики).</p>
+			<?php echo $test_notice_html ? $test_notice_html : ''; ?>
 
 			<form method="post" style="max-width:800px;">
 				<?php wp_nonce_field( 'wc_ms_save', 'wc_ms_nonce' ); ?>
@@ -809,8 +1072,26 @@ class WC_MoySklad_Sync {
 						<td><input type="text" id="ms_note" name="<?php echo esc_attr( self::OPT_NOTE_LABEL ); ?>" value="<?php echo esc_attr( $note_label ); ?>" class="regular-text" placeholder="МойСклад" /></td>
 					</tr>
 					<tr>
+						<th>Резерв при создании</th>
+						<td><label><input type="checkbox" name="<?php echo esc_attr( self::OPT_RESERVE_ON_CREATE ); ?>" value="1" <?php checked( $reserve_on_create, '1' ); ?> /> Резервировать количество в customerorder.positions.reserve (если поддерживается вашей схемой склад/заказы)</label></td>
+					</tr>
+					<tr>
 						<th>Отладка</th>
 						<td><label><input type="checkbox" name="<?php echo esc_attr( self::OPT_DEBUG ); ?>" value="1" <?php checked( $debug, '1' ); ?> /> Записывать API-запросы в debug.log</label></td>
+					</tr>
+				</table>
+
+				<hr>
+				<h2>Тесты (по шагам)</h2>
+				<table class="form-table">
+					<tr>
+						<td><button type="submit" class="button" name="wc_ms_test_action" value="connection">Тест: подключение</button></td>
+					</tr>
+					<tr>
+						<td><button type="submit" class="button" name="wc_ms_test_action" value="entities">Тест: загрузка организаций/складов/статусов</button></td>
+					</tr>
+					<tr>
+						<td><button type="submit" class="button button-primary" name="wc_ms_test_action" value="create_draft_roundtrip">Тест: создать черновик + смена state</button></td>
 					</tr>
 				</table>
 
@@ -853,6 +1134,7 @@ class WC_MoySklad_Sync {
 			self::OPT_DEFAULT_PROD => 'text',
 			self::OPT_DEBUG        => 'checkbox',
 			self::OPT_ADD_SHIPPING => 'checkbox',
+			self::OPT_RESERVE_ON_CREATE => 'checkbox',
 			self::OPT_NOTE_LABEL   => 'text',
 		);
 

@@ -172,6 +172,19 @@ class WC_MS_API {
 		return $this->get( 'entity/customerorder/' . $id );
 	}
 
+	/**
+	 * Обновить Заказ покупателя (customerorder) в МойСклад.
+	 *
+	 * Используется, чтобы синхронизировать state при изменении статусов в WooCommerce.
+	 *
+	 * @param string $id
+	 * @param array  $body
+	 * @return array|WP_Error
+	 */
+	public function update_customer_order( $id, array $body ) {
+		return $this->put( 'entity/customerorder/' . $id, $body );
+	}
+
 	/* ── Вебхуки ────────────────────────────────────────────── */
 
 	public function get_webhooks() {
