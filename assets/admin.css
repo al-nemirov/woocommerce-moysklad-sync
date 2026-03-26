@@ -1,0 +1,387 @@
+/**
+ * Админка плагина МойСклад — только внутри .wc-ms-app
+ */
+.wc-ms-app {
+	max-width: 1100px;
+	margin-bottom: 48px;
+}
+
+.wc-ms-app .wc-ms-title {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+	flex-wrap: wrap;
+	margin: 0 0 8px;
+	font-size: 23px;
+	font-weight: 400;
+	line-height: 1.3;
+}
+
+.wc-ms-app .wc-ms-title-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.wc-ms-app .wc-ms-lead {
+	font-size: 14px;
+	color: #646970;
+	margin: 0 0 20px;
+	max-width: 720px;
+	line-height: 1.5;
+}
+
+.wc-ms-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin: 0 0 0;
+	padding: 0;
+	border: none;
+	list-style: none;
+	border-bottom: 1px solid #c3c4c7;
+	background: transparent;
+}
+
+.wc-ms-tabs li {
+	margin: 0;
+}
+
+.wc-ms-tab {
+	display: inline-block;
+	padding: 10px 14px;
+	margin: 0 0 -1px;
+	font-size: 14px;
+	line-height: 1.4;
+	text-decoration: none;
+	color: #2c3338;
+	border: 1px solid transparent;
+	border-bottom: none;
+	border-radius: 4px 4px 0 0;
+	background: transparent;
+	cursor: pointer;
+	font-family: inherit;
+}
+
+.wc-ms-tab:hover {
+	color: #135e96;
+	background: #f6f7f7;
+}
+
+.wc-ms-tab.is-active {
+	color: #1d2327;
+	background: #fff;
+	border-color: #c3c4c7;
+	border-bottom-color: #fff;
+	font-weight: 600;
+}
+
+.wc-ms-panels {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-top: none;
+	padding: 20px 24px 28px;
+	margin-bottom: 0;
+	border-radius: 0 0 4px 4px;
+}
+
+.wc-ms-panel {
+	display: none;
+	animation: wc-ms-fade 0.15s ease;
+}
+
+.wc-ms-panel.is-active {
+	display: block;
+}
+
+@keyframes wc-ms-fade {
+	from { opacity: 0.6; }
+	to { opacity: 1; }
+}
+
+.wc-ms-card {
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: 16px 18px 18px;
+	margin-bottom: 20px;
+}
+
+.wc-ms-card:last-child {
+	margin-bottom: 0;
+}
+
+.wc-ms-card h3 {
+	margin: 0 0 6px;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.35;
+}
+
+.wc-ms-card .wc-ms-card-desc {
+	margin: 0 0 14px;
+	font-size: 13px;
+	color: #646970;
+	line-height: 1.45;
+}
+
+.wc-ms-card .form-table {
+	margin-top: 0;
+}
+
+.wc-ms-card .form-table th {
+	width: 200px;
+	padding-left: 0;
+	font-weight: 500;
+	vertical-align: top;
+	padding-top: 12px;
+}
+
+.wc-ms-card .form-table td {
+	padding-top: 10px;
+	padding-bottom: 12px;
+}
+
+.wc-ms-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin-bottom: 16px;
+}
+
+.wc-ms-toolbar .button-hero {
+	margin-right: 4px;
+}
+
+.wc-ms-sticky-footer {
+	position: sticky;
+	bottom: 0;
+	z-index: 30;
+	margin: 24px -12px -32px;
+	padding: 14px 24px;
+	background: #fff;
+	border-top: 1px solid #c3c4c7;
+	box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.wc-ms-sticky-footer .wc-ms-footer-hint {
+	font-size: 13px;
+	color: #646970;
+	margin: 0;
+}
+
+/* Предпросмотр */
+.wc-ms-preview-hero {
+	background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+	color: #fff;
+	border-radius: 8px;
+	padding: 22px 26px;
+	margin-bottom: 20px;
+	box-shadow: 0 4px 14px rgba(30, 58, 95, 0.25);
+}
+
+.wc-ms-preview-hero h2 {
+	color: #fff;
+	margin: 0 0 8px;
+	font-size: 22px;
+	font-weight: 500;
+	border: none;
+	padding: 0;
+	line-height: 1.25;
+}
+
+.wc-ms-preview-hero .wc-ms-preview-kicker {
+	margin: 0 0 6px;
+	font-size: 12px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	opacity: 0.85;
+}
+
+.wc-ms-preview-hero p {
+	margin: 0;
+	opacity: 0.92;
+	font-size: 14px;
+	line-height: 1.5;
+	max-width: 640px;
+}
+
+.wc-ms-preview-hero a {
+	color: #b8d4f0;
+}
+
+.wc-ms-preview-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-items: flex-end;
+	margin-bottom: 8px;
+}
+
+.wc-ms-preview-toolbar .wc-ms-field {
+	flex: 1 1 280px;
+	min-width: 200px;
+}
+
+.wc-ms-preview-toolbar label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 6px;
+	font-size: 13px;
+}
+
+.wc-ms-preview-toolbar select,
+.wc-ms-preview-toolbar input[type="number"] {
+	width: 100%;
+	max-width: 100%;
+	font-size: 14px;
+	padding: 6px 10px;
+	height: auto;
+	min-height: 40px;
+}
+
+.wc-ms-preview-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	margin: 16px 0 20px;
+}
+
+.wc-ms-preview-actions .button {
+	padding: 0 16px;
+	min-height: 40px;
+	line-height: 38px;
+}
+
+.wc-ms-preview-actions .button-primary {
+	box-shadow: 0 2px 6px rgba(0, 115, 170, 0.35);
+}
+
+.wc-ms-preview-msg {
+	font-size: 14px;
+	min-height: 22px;
+	margin: 0;
+}
+
+.wc-ms-preview-result {
+	margin-top: 8px;
+	padding-top: 16px;
+	border-top: 1px solid #dcdcde;
+}
+
+.wc-ms-preview-result:empty {
+	display: none;
+}
+
+/* Блок вебхука под вкладкой «МС → магазин» */
+.wc-ms-panel-extra {
+	max-width: 1100px;
+	margin: 0 0 32px;
+}
+
+.wc-ms-panel-extra .wc-ms-panels {
+	padding-top: 0;
+}
+
+/* Предпросмотр: таблица как список МС */
+.wc-ms-preview-inner .wc-ms-table-scroll {
+	overflow-x: auto;
+	margin: 8px 0 4px;
+	-webkit-overflow-scrolling: touch;
+}
+
+.wc-ms-preview-inner .wc-ms-ms-list th {
+	white-space: nowrap;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.wc-ms-preview-inner .wc-ms-ms-list td {
+	vertical-align: top;
+	font-size: 13px;
+}
+
+.wc-ms-preview-inner .wc-ms-pill-status {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.35;
+	white-space: nowrap;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	vertical-align: middle;
+}
+
+.wc-ms-preview-inner .wc-ms-td-comment {
+	max-width: 240px;
+	font-size: 12px;
+	line-height: 1.4;
+	word-break: break-word;
+}
+
+.wc-ms-preview-inner .wc-ms-preview-list-caption {
+	margin: 12px 0 4px;
+}
+
+.wc-ms-preview-inner details.wc-ms-preview-desc-full summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.wc-ms-badge {
+	display: inline-block;
+	padding: 3px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 600;
+	vertical-align: middle;
+}
+
+.wc-ms-badge--ok {
+	background: #00a32a;
+	color: #fff;
+}
+
+.wc-ms-badge--off {
+	background: #dba617;
+	color: #1d2327;
+}
+
+/* Таблица маппинга */
+.wc-ms-app .widefat.wc-ms-map-table {
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.wc-ms-app .widefat.wc-ms-map-table th {
+	font-weight: 600;
+}
+
+.wc-ms-app .wc-ms-map-remove {
+	color: #b32d2e;
+	text-decoration: none;
+	font-size: 18px;
+	line-height: 1;
+	padding: 0 6px;
+}
+
+@media screen and (max-width: 782px) {
+	.wc-ms-app .wc-ms-card .form-table th,
+	.wc-ms-app .wc-ms-card .form-table td {
+ display: block;
+		width: 100%;
+		padding-right: 0;
+	}
+}
