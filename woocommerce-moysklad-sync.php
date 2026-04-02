@@ -3,7 +3,7 @@
  * Plugin Name: WooCommerce МойСклад Sync
  * Plugin URI: https://github.com/al-nemirov/woocommerce-moysklad-sync
  * Description: Синхронизация заказов WooCommerce с МойСклад (заказы покупателя, контрагенты, позиции по артикулу).
- * Version: 2.8.2
+ * Version: 3.0.0
  * Author: Al Nemirov
  * Author URI: https://github.com/al-nemirov
  * Requires at least: 5.8
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WC_MS_SYNC_VERSION', '2.8.2' );
+define( 'WC_MS_SYNC_VERSION', '3.0.0' );
 define( 'WC_MS_SYNC_FILE', __FILE__ );
 
 register_activation_hook( __FILE__, 'wc_ms_sync_activate' );

@@ -377,6 +377,33 @@
 	padding: 0 6px;
 }
 
+/* Справочник переменных */
+.wc-ms-tokens-ref {
+	margin-top: 8px;
+}
+
+.wc-ms-tokens-ref code.wc-ms-token-copy {
+	display: inline-block;
+	padding: 2px 6px;
+	border-radius: 3px;
+	background: #f0f0f1;
+	border: 1px solid #c3c4c7;
+	font-size: 12px;
+	transition: background 0.15s, color 0.15s;
+}
+
+.wc-ms-tokens-ref code.wc-ms-token-copy:hover {
+	background: #2271b1;
+	color: #fff;
+	border-color: #2271b1;
+}
+
+.wc-ms-tokens-ref code.wc-ms-token-copy.wc-ms-copied {
+	background: #00a32a;
+	color: #fff;
+	border-color: #00a32a;
+}
+
 @media screen and (max-width: 782px) {
 	.wc-ms-app .wc-ms-card .form-table th,
 	.wc-ms-app .wc-ms-card .form-table td {

@@ -11,11 +11,21 @@ class WC_MS_API {
 
 	const BASE = 'https://api.moysklad.ru/api/remap/1.2/';
 
-	private $auth;
+	private $auth_header;
 	private $debug;
 
+	/**
+	 * @param string $login    Логин МС (email) или пустая строка при использовании токена.
+	 * @param string $password Пароль МС или Bearer-токен (если $login пуст).
+	 * @param bool   $debug
+	 */
 	public function __construct( $login, $password, $debug = false ) {
-		$this->auth  = base64_encode( $login . ':' . $password );
+		if ( $login !== '' ) {
+			$this->auth_header = 'Basic ' . base64_encode( $login . ':' . $password );
+		} else {
+			// Bearer token: $password содержит токен.
+			$this->auth_header = 'Bearer ' . $password;
+		}
 		$this->debug = $debug;
 	}
 
@@ -52,7 +62,7 @@ class WC_MS_API {
 	private function request( $method, $url, $body = null, $extra_headers = array(), $retry_429_attempt = 0 ) {
 		// Content-Type только при теле: GET/DELETE с application/json дают 400 у JSON API МойСклад.
 		$headers = array(
-			'Authorization' => 'Basic ' . $this->auth,
+			'Authorization' => $this->auth_header,
 			'Accept'        => 'application/json;charset=utf-8',
 			// gzip через стек WP часто ломает Accept (1062) — для cURL см. CURLOPT_ENCODING ниже.
 			'Accept-Encoding' => 'gzip',
@@ -207,16 +217,28 @@ class WC_MS_API {
 				self::append_debug_file( sprintf( 'HTTP 429 limit | %s %s', $method, $url ) );
 				return new WP_Error( 'ms_api_429', 'МойСклад: превышен лимит запросов (429). Повторите позже.' );
 			}
-			$retry_after = $retry_after_header !== null && $retry_after_header !== '' ? (int) $retry_after_header : 3;
-			if ( $retry_after < 1 ) {
-				$retry_after = 3;
+			// X-Lognex-Retry-After возвращается в миллисекундах — конвертируем в секунды.
+			$retry_ms = $retry_after_header !== null && $retry_after_header !== '' ? (int) $retry_after_header : 0;
+			if ( $retry_ms > 0 ) {
+				$retry_sec = (int) ceil( $retry_ms / 1000 );
+			} else {
+				$retry_sec = 3;
 			}
-			$retry_after = min( $retry_after, 10 );
+			$retry_sec = max( 1, min( $retry_sec, 10 ) );
 			if ( $this->debug ) {
-				$this->log( sprintf( 'Rate limited, retry %d in %d sec', $retry_429_attempt + 1, $retry_after ) );
+				$this->log( sprintf( 'Rate limited (header=%s ms), retry %d in %d sec', (string) $retry_after_header, $retry_429_attempt + 1, $retry_sec ) );
 			}
-			sleep( $retry_after );
+			sleep( $retry_sec );
 			return $this->request( $method, $url, $body, $extra_headers, $retry_429_attempt + 1 );
+		}
+
+		// 200/201 с телом — JSON; 204 No Content (DELETE) — пустое тело.
+		if ( $code === 204 || $raw_body === '' ) {
+			if ( $code >= 400 ) {
+				self::append_debug_file( sprintf( 'HTTP %d | %s %s | (empty body)', $code, $method, $url ) );
+				return new WP_Error( 'ms_api_' . $code, 'HTTP ' . $code );
+			}
+			return array( 'ok' => true );
 		}
 
 		$data = json_decode( $raw_body, true );
@@ -414,7 +436,22 @@ class WC_MS_API {
 	}
 
 	public function delete_webhook( $id ) {
-		return $this->request( 'DELETE', self::BASE . 'entity/webhook/' . $id );
+		return $this->request( 'DELETE', self::BASE . 'entity/webhook/' . $id, null, array(), 0 );
+	}
+
+	/**
+	 * Универсальный DELETE с возможностью отключить вебхук.
+	 *
+	 * @param string $endpoint
+	 * @param bool   $disable_webhooks
+	 * @return array|WP_Error
+	 */
+	public function delete( $endpoint, $disable_webhooks = false ) {
+		$extra = array();
+		if ( $disable_webhooks ) {
+			$extra['X-Lognex-WebHook-Disable'] = 'true';
+		}
+		return $this->request( 'DELETE', self::BASE . $endpoint, null, $extra, 0 );
 	}
 
 	/* ── Проверка подключения ───────────────────────────────── */

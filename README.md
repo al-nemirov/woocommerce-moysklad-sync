@@ -171,13 +171,40 @@ Endpoint: `/wp-json/moysklad/v1/webhook`
 
 Поддерживаются плейсхолдеры:
 
-- `{site_host}`, `{order_number}`, `{order_id}`
+**Заказ:**
+- `{site_host}` — домен сайта
+- `{order_number}` — номер заказа WC
+- `{order_id}` — ID заказа WC (число)
+- `{order_date}` — дата заказа (d.m.Y)
+- `{order_time}` — время заказа (H:i)
+- `{order_total}` — общая сумма + валюта
+- `{order_subtotal}` — сумма товаров (без доставки)
+- `{order_discount}` — скидка
+- `{order_shipping_total}` — стоимость доставки
+- `{order_tax_total}` — сумма налогов
+- `{order_currency}` — валюта заказа (код)
+- `{items_count}` — количество позиций
+
+**Покупатель:**
 - `{first_name}`, `{last_name}`, `{company}`
 - `{email}`, `{email_local}`, `{phone}`
-- `{shipping_method}`, `{shipping_city}`, `{shipping_address_1}`
-- `{billing_address}`, `{shipping_address}`
-- `{payment_method_title}`, `{customer_note}`
-- `{order_total}`, `{line_items}`
+- `{customer_id}` — ID пользователя WP
+
+**Billing-адрес:**
+- `{billing_address}` — полный адрес оплаты
+- `{billing_city}`, `{billing_state}`, `{billing_postcode}`, `{billing_country}`
+
+**Shipping-адрес:**
+- `{shipping_address}` — полный адрес доставки
+- `{shipping_address_1}`, `{shipping_city}`, `{shipping_state}`, `{shipping_postcode}`, `{shipping_country}`
+
+**Доставка и оплата:**
+- `{shipping_method}`, `{payment_method}`, `{payment_method_title}`
+
+**Прочее:**
+- `{customer_note}`, `{line_items}`
+
+> В разделе **Предпросмотр** доступен интерактивный справочник переменных с живыми значениями из конкретного заказа.
 
 ---
 

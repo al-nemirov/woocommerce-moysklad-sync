@@ -145,7 +145,6 @@ jQuery(function($) {
             var d = response.data;
             result.text('Загружено!').css('color', 'green');
 
-            // Организации
             if (d.organizations) {
                 var sel = $('#ms_org');
                 var cur = sel.val();
@@ -157,7 +156,6 @@ jQuery(function($) {
                 });
             }
 
-            // Склады
             if (d.stores) {
                 var sel2 = $('#ms_store');
                 var cur2 = sel2.val();
@@ -169,7 +167,6 @@ jQuery(function($) {
                 });
             }
 
-            // Статусы МС
             if (d.states) {
                 var sel3 = $('#ms_state');
                 var cur3 = sel3.val();
@@ -291,4 +288,33 @@ jQuery(function($) {
             msg.text('Ошибка сети').css('color', '#b32d2e');
         });
     });
+
+    // Копирование переменной по клику
+    $(document).on('click', '.wc-ms-token-copy', function() {
+        var text = $(this).text();
+        var el = this;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+                wcMsFlashCopied(el);
+            });
+        } else {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            wcMsFlashCopied(el);
+        }
+    });
+
+    function wcMsFlashCopied(el) {
+        var $el = $(el);
+        $el.addClass('wc-ms-copied');
+        setTimeout(function() {
+            $el.removeClass('wc-ms-copied');
+        }, 1200);
+    }
 });
