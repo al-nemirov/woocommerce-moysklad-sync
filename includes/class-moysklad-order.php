@@ -21,8 +21,13 @@ class WC_MS_Order {
 	public static function sync_order( $order ) {
 		$login    = get_option( WC_MoySklad_Sync::OPT_LOGIN, '' );
 		$password = get_option( WC_MoySklad_Sync::OPT_PASSWORD, '' );
-		if ( empty( $login ) || empty( $password ) ) {
-			self::set_error( $order, 'Не заданы логин или пароль МойСклад.' );
+		// Bearer token: логин пуст, пароль содержит токен. Basic: оба обязательны.
+		if ( $login === '' && $password === '' ) {
+			self::set_error( $order, 'Не заданы логин/пароль или Bearer-токен МойСклад.' );
+			return;
+		}
+		if ( $login !== '' && $password === '' ) {
+			self::set_error( $order, 'Не задан пароль МойСклад.' );
 			return;
 		}
 
@@ -167,10 +172,12 @@ class WC_MS_Order {
 	 * @param string   $ms_state_id
 	 */
 	public static function update_ms_order_state( $order, $ms_id, $ms_state_id ) {
-		$api = WC_MoySklad_Sync::api();
-		if ( ! $api ) {
+		$login    = get_option( WC_MoySklad_Sync::OPT_LOGIN, '' );
+		$password = get_option( WC_MoySklad_Sync::OPT_PASSWORD, '' );
+		if ( $login === '' && $password === '' ) {
 			return;
 		}
+		$api = WC_MoySklad_Sync::api();
 
 		$current = $api->get_customer_order( $ms_id );
 		if ( ! is_wp_error( $current ) && isset( $current['state']['meta']['href'] ) ) {

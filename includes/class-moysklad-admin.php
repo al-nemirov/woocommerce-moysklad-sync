@@ -190,8 +190,11 @@ class WC_MS_Admin {
 		$login    = isset( $_POST['login'] ) ? sanitize_text_field( wp_unslash( $_POST['login'] ) ) : get_option( WC_MoySklad_Sync::OPT_LOGIN, '' );
 		$password = isset( $_POST['password'] ) && $_POST['password'] !== '' ? sanitize_text_field( wp_unslash( $_POST['password'] ) ) : get_option( WC_MoySklad_Sync::OPT_PASSWORD, '' );
 
-		if ( empty( $login ) || empty( $password ) ) {
-			wp_send_json_error( 'Введите логин и пароль.' );
+		if ( $login === '' && $password === '' ) {
+			wp_send_json_error( 'Введите логин/пароль или Bearer-токен.' );
+		}
+		if ( $login !== '' && $password === '' ) {
+			wp_send_json_error( 'Введите пароль.' );
 		}
 
 		$api    = new WC_MS_API( $login, $password );
@@ -342,8 +345,12 @@ class WC_MS_Admin {
 
 		$login    = get_option( WC_MoySklad_Sync::OPT_LOGIN, '' );
 		$password = get_option( WC_MoySklad_Sync::OPT_PASSWORD, '' );
-		if ( $login === '' || $password === '' ) {
-			return new WP_Error( 'wc_ms_preview_auth', 'Задайте логин и пароль МойСклад в настройках.' );
+		// Bearer: логин пуст, пароль = токен. Basic: оба нужны.
+		if ( $login === '' && $password === '' ) {
+			return new WP_Error( 'wc_ms_preview_auth', 'Задайте логин/пароль или Bearer-токен МойСклад в настройках.' );
+		}
+		if ( $login !== '' && $password === '' ) {
+			return new WP_Error( 'wc_ms_preview_auth', 'Задайте пароль МойСклад в настройках.' );
 		}
 
 		$api = WC_MoySklad_Sync::api();
