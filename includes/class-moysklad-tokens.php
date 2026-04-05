@@ -240,7 +240,11 @@ class WC_MS_Tokens {
 			$parts[] = $name . ' ×' . (int) $item->get_quantity();
 		}
 		$s = implode( ', ', $parts );
-		if ( strlen( $s ) > $max_len ) {
+		if ( function_exists( 'mb_strlen' ) ) {
+			if ( mb_strlen( $s, 'UTF-8' ) > $max_len ) {
+				return mb_substr( $s, 0, $max_len - 3, 'UTF-8' ) . '...';
+			}
+		} elseif ( strlen( $s ) > $max_len ) {
 			return substr( $s, 0, $max_len - 3 ) . '...';
 		}
 		return $s;
