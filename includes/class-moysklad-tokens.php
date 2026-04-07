@@ -20,51 +20,108 @@ class WC_MS_Tokens {
 	public static function registry() {
 		return array(
 			// Заказ
-			'{site_host}'            => 'Домен сайта',
-			'{order_number}'         => 'Номер заказа WC',
-			'{order_id}'             => 'ID заказа WC (число)',
-			'{order_date}'           => 'Дата заказа (d.m.Y)',
-			'{order_time}'           => 'Время заказа (H:i)',
-			'{order_total}'          => 'Общая сумма + валюта',
-			'{order_subtotal}'       => 'Сумма товаров (без доставки)',
-			'{order_discount}'       => 'Скидка',
+			'{site_host}'            => 'Домен сайта (пример: shop.ru)',
+			'{order_number}'         => 'Номер заказа в магазине (видит покупатель)',
+			'{order_id}'             => 'ID заказа в БД (число)',
+			'{order_date}'           => 'Дата заказа, формат ДД.ММ.ГГГГ',
+			'{order_time}'           => 'Время заказа, формат ЧЧ:ММ',
+			'{order_total}'          => 'Итоговая сумма с валютой (пример: 1500.00 RUB)',
+			'{order_subtotal}'       => 'Сумма товаров без доставки и налогов',
+			'{order_discount}'       => 'Сумма скидки',
 			'{order_shipping_total}' => 'Стоимость доставки',
-			'{order_tax_total}'      => 'Сумма налогов',
-			'{order_currency}'       => 'Валюта заказа (код)',
-			'{items_count}'          => 'Количество позиций',
+			'{order_tax_total}'      => 'Сумма всех налогов',
+			'{order_currency}'       => 'Код валюты (пример: RUB, USD)',
+			'{items_count}'          => 'Количество товаров в заказе',
 
 			// Покупатель
-			'{first_name}'           => 'Имя (billing)',
-			'{last_name}'            => 'Фамилия (billing)',
-			'{company}'              => 'Компания (billing)',
-			'{email}'                => 'Email покупателя',
-			'{email_local}'          => 'Часть email до @',
-			'{phone}'                => 'Телефон (billing)',
-			'{customer_id}'          => 'ID пользователя WP',
+			'{first_name}'           => 'Имя покупателя',
+			'{last_name}'            => 'Фамилия покупателя',
+			'{company}'              => 'Компания (если указана)',
+			'{email}'                => 'Email покупателя (полный адрес)',
+			'{email_local}'          => 'Часть email до знака @ (пример: из john@example.com → john)',
+			'{phone}'                => 'Номер телефона',
+			'{customer_id}'          => 'ID пользователя в WordPress',
 
 			// Billing-адрес
-			'{billing_address}'      => 'Полный адрес оплаты',
-			'{billing_city}'         => 'Город (billing)',
-			'{billing_state}'        => 'Регион (billing)',
-			'{billing_postcode}'     => 'Индекс (billing)',
-			'{billing_country}'      => 'Страна (billing, код)',
+			'{billing_address}'      => 'Полный адрес оплаты в одну строку',
+			'{billing_city}'         => 'Город оплаты',
+			'{billing_state}'        => 'Область/регион оплаты',
+			'{billing_postcode}'     => 'Почтовый индекс оплаты',
+			'{billing_country}'      => 'Страна оплаты (код, пример: RU)',
 
 			// Shipping-адрес
-			'{shipping_address}'     => 'Полный адрес доставки',
-			'{shipping_address_1}'   => 'Улица (shipping)',
-			'{shipping_city}'        => 'Город (shipping)',
-			'{shipping_state}'       => 'Регион (shipping)',
-			'{shipping_postcode}'    => 'Индекс (shipping)',
-			'{shipping_country}'     => 'Страна (shipping, код)',
+			'{shipping_address}'     => 'Полный адрес доставки в одну строку',
+			'{shipping_address_1}'   => 'Улица/номер дома (доставка)',
+			'{shipping_city}'        => 'Город доставки',
+			'{shipping_state}'       => 'Область/регион доставки',
+			'{shipping_postcode}'    => 'Почтовый индекс доставки',
+			'{shipping_country}'     => 'Страна доставки (код)',
 
 			// Доставка и оплата
-			'{shipping_method}'      => 'Способ доставки',
-			'{payment_method}'       => 'Код метода оплаты',
-			'{payment_method_title}' => 'Название метода оплаты',
+			'{shipping_method}'      => 'Название способа доставки',
+			'{payment_method}'       => 'Код способа оплаты (пример: cod, bank_transfer)',
+			'{payment_method_title}' => 'Название способа оплаты для отображения',
 
 			// Прочее
-			'{customer_note}'        => 'Примечание покупателя',
-			'{line_items}'           => 'Список позиций (Товар ×2, …)',
+			'{customer_note}'        => 'Примечание покупателя к заказу',
+			'{line_items}'           => 'Список товаров (пример: Рубашка ×2, Джинсы ×1)',
+		);
+	}
+
+	/**
+	 * Расширенный реестр с категориями и подробными описаниями.
+	 *
+	 * @return array Массив [ 'category' => [ '{token}' => 'full_desc', ... ], ... ]
+	 */
+	public static function registry_detailed() {
+		return array(
+			'order' => array(
+				'{site_host}' => 'Домен вашего магазина. Пример: shop.ru',
+				'{order_number}' => 'Номер заказа, видимый покупателю. Пример: #2025-001',
+				'{order_id}' => 'Уникальный ID заказа в базе. Пример: 12345',
+				'{order_date}' => 'Дата в формате ДД.ММ.ГГГГ. Пример: 15.04.2026',
+				'{order_time}' => 'Время в формате ЧЧ:ММ. Пример: 14:35',
+				'{order_total}' => 'Финальная сумма с валютой. Пример: 1500.00 RUB',
+				'{order_subtotal}' => 'Сумма без доставки и налогов. Пример: 1400.00',
+				'{order_discount}' => 'Скидка (если была). Пример: 100.00',
+				'{order_shipping_total}' => 'Стоимость доставки. Пример: 200.00',
+				'{order_tax_total}' => 'Налог (если есть). Пример: 0.00',
+				'{order_currency}' => 'Трёхбуквенный код. Пример: RUB',
+				'{items_count}' => 'Общее количество товаров. Пример: 3',
+			),
+			'customer' => array(
+				'{first_name}' => 'Имя из формы оплаты. Пример: Иван',
+				'{last_name}' => 'Фамилия из формы оплаты. Пример: Петров',
+				'{company}' => 'Организация (необязательное поле). Пример: ООО Рога',
+				'{email}' => 'Электронная почта. Пример: ivan@example.com',
+				'{email_local}' => 'Только часть до @. Пример: из ivan@example.com → ivan',
+				'{phone}' => 'Номер телефона. Пример: +7 (499) 123-45-67',
+				'{customer_id}' => 'ID пользователя в WordPress. Пример: 5',
+			),
+			'billing' => array(
+				'{billing_address}' => 'Адрес оплаты одной строкой. Пример: ул. Ленина, 10, кв. 5, Москва, 123456',
+				'{billing_city}' => 'Город. Пример: Москва',
+				'{billing_state}' => 'Область/штат. Пример: Московская область',
+				'{billing_postcode}' => 'Почтовый индекс. Пример: 123456',
+				'{billing_country}' => 'Код страны. Пример: RU',
+			),
+			'shipping' => array(
+				'{shipping_address}' => 'Адрес доставки одной строкой',
+				'{shipping_address_1}' => 'Улица и номер дома. Пример: ул. Пушкина, 15',
+				'{shipping_city}' => 'Город доставки. Пример: Санкт-Петербург',
+				'{shipping_state}' => 'Область доставки. Пример: Ленинградская',
+				'{shipping_postcode}' => 'Индекс доставки. Пример: 190000',
+				'{shipping_country}' => 'Страна доставки. Пример: RU',
+			),
+			'payment' => array(
+				'{shipping_method}' => 'Способ доставки. Пример: Курьер по городу',
+				'{payment_method}' => 'ID способа оплаты. Пример: cod, bank_transfer',
+				'{payment_method_title}' => 'Название для показа. Пример: Наличные при получении',
+			),
+			'other' => array(
+				'{customer_note}' => 'Заметка от покупателя. Пример: Позвонить перед доставкой',
+				'{line_items}' => 'Список товаров с количеством. Пример: Рубашка ×2, Джинсы ×1',
+			),
 		);
 	}
 
@@ -152,23 +209,31 @@ class WC_MS_Tokens {
 	}
 
 	/**
-	 * Справочник: массив [ [ 'token' => '{...}', 'desc' => '...', 'value' => '...' ], ... ]
+	 * Справочник: массив [ [ 'token' => '{...}', 'short_desc' => '...', 'full_desc' => '...', 'value' => '...' ], ... ]
+	 * Сгруппировано по категориям для более понятного отображения.
 	 *
 	 * @param WC_Order $order
-	 * @return array
+	 * @return array Массив с категориями: [ 'category_name' => [ rows ], ... ]
 	 */
 	public static function reference_table( $order ) {
-		$registry = self::registry();
-		$values   = self::resolve_all( $order );
-		$rows     = array();
-		foreach ( $registry as $token => $desc ) {
-			$rows[] = array(
-				'token' => $token,
-				'desc'  => $desc,
-				'value' => isset( $values[ $token ] ) ? $values[ $token ] : '',
-			);
+		$registry_short = self::registry();
+		$registry_full  = self::registry_detailed();
+		$values         = self::resolve_all( $order );
+		$result         = array();
+
+		foreach ( $registry_full as $category => $tokens ) {
+			$result[ $category ] = array();
+			foreach ( $tokens as $token => $full_desc ) {
+				$short_desc = isset( $registry_short[ $token ] ) ? $registry_short[ $token ] : $full_desc;
+				$result[ $category ][] = array(
+					'token'      => $token,
+					'short_desc' => $short_desc,
+					'full_desc'  => $full_desc,
+					'value'      => isset( $values[ $token ] ) ? $values[ $token ] : '',
+				);
+			}
 		}
-		return $rows;
+		return $result;
 	}
 
 	/* ── Хелперы ───────────────────────────────────────────── */

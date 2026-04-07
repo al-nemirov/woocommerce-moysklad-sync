@@ -645,25 +645,42 @@ class WC_MS_Admin {
 
 			<?php // Справочник переменных ?>
 			<h3 style="margin-top:20px;">Справочник переменных</h3>
-			<p class="description">Все плейсхолдеры для шаблонов «Название заказа» и «Комментарий». Значения — из текущего заказа. Нажмите на переменную, чтобы скопировать.</p>
-			<table class="widefat striped wc-ms-tokens-ref" style="max-width:100%;">
-				<thead>
-					<tr>
-						<th style="width:200px;">Переменная</th>
-						<th style="width:200px;">Описание</th>
-						<th>Значение</th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php foreach ( $d['tokens_ref'] as $row ) : ?>
-						<tr>
-							<td><code class="wc-ms-token-copy" style="cursor:pointer;" title="Нажмите, чтобы скопировать"><?php echo esc_html( $row['token'] ); ?></code></td>
-							<td><?php echo esc_html( $row['desc'] ); ?></td>
-							<td><span style="font-size:12px;word-break:break-word;"><?php echo esc_html( $row['value'] !== '' ? $row['value'] : '—' ); ?></span></td>
-						</tr>
-					<?php endforeach; ?>
-				</tbody>
-			</table>
+			<p class="description">Используйте плейсхолдеры в шаблонах названия заказа и комментария. Нажимайте на переменную, чтобы скопировать. Значения — из выбранного заказа. 💡 = подсказка с примером.</p>
+
+			<?php
+			$category_labels = array(
+				'order'   => '📦 Заказ',
+				'customer' => '👤 Покупатель',
+				'billing' => '💳 Адрес оплаты',
+				'shipping' => '🚚 Адрес доставки',
+				'payment' => '💰 Доставка и оплата',
+				'other'   => '📝 Прочее',
+			);
+			?>
+
+			<?php foreach ( $d['tokens_ref'] as $category => $rows ) : ?>
+				<h4 style="margin-top:16px;margin-bottom:8px;color:#555;"><?php echo esc_html( isset( $category_labels[ $category ] ) ? $category_labels[ $category ] : ucfirst( $category ) ); ?></h4>
+				<table class="widefat striped wc-ms-tokens-ref" style="max-width:100%;margin-bottom:16px;">
+					<tbody>
+						<?php foreach ( $rows as $row ) : ?>
+							<tr style="vertical-align:top;">
+								<td style="width:180px;padding:10px;">
+									<code class="wc-ms-token-copy" style="cursor:pointer;background:#f6f7f7;padding:4px 6px;display:block;word-break:break-all;user-select:all;" title="Нажмите, чтобы скопировать"><?php echo esc_html( $row['token'] ); ?></code>
+								</td>
+								<td style="width:240px;padding:10px;">
+									<strong style="display:block;margin-bottom:4px;"><?php echo esc_html( $row['short_desc'] ); ?></strong>
+									<span class="dashicons dashicons-info" style="color:#0073aa;cursor:help;font-size:16px;width:auto;height:auto;" title="<?php echo esc_attr( $row['full_desc'] ); ?>" onclick="alert('<?php echo esc_attr( $row['full_desc'] ); ?>')"></span>
+								</td>
+								<td style="padding:10px;">
+									<span style="font-size:13px;word-break:break-word;color:#666;display:block;max-height:80px;overflow:auto;border-left:3px solid #ddd;padding-left:8px;background:#fafafa;">
+										<?php echo esc_html( $row['value'] !== '' ? $row['value'] : '—' ); ?>
+									</span>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endforeach; ?>
 		</div>
 		<?php
 		return (string) ob_get_clean();
