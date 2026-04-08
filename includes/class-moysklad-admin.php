@@ -796,6 +796,8 @@ class WC_MS_Admin {
 		$debug        = get_option( WC_MoySklad_Sync::OPT_DEBUG, '0' );
 		$add_shipping         = get_option( WC_MoySklad_Sync::OPT_ADD_SHIPPING, '0' );
 		$shipping_service_id  = get_option( WC_MoySklad_Sync::OPT_SHIPPING_SERVICE_ID, '' );
+		$shipping_markup      = get_option( WC_MoySklad_Sync::OPT_SHIPPING_MARKUP, '22' );
+		$sales_channel_id     = get_option( WC_MoySklad_Sync::OPT_SALES_CHANNEL_ID, '' );
 		$reserve_on_create = get_option( WC_MoySklad_Sync::OPT_RESERVE_ON_CREATE, '0' );
 		$order_applicable  = get_option( WC_MoySklad_Sync::OPT_ORDER_APPLICABLE, '0' );
 		$note_label   = get_option( WC_MoySklad_Sync::OPT_NOTE_LABEL, 'МойСклад' );
@@ -916,6 +918,13 @@ class WC_MS_Admin {
 							<p class="description">Обязателен при резерве (вкладка «Учёт»).</p>
 						</td>
 					</tr>
+					<tr>
+						<th scope="row"><label for="ms_sales_channel">Канал продаж</label></th>
+						<td>
+							<input type="text" id="ms_sales_channel" name="<?php echo esc_attr( WC_MoySklad_Sync::OPT_SALES_CHANNEL_ID ); ?>" value="<?php echo esc_attr( $sales_channel_id ); ?>" class="regular-text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+							<p class="description">UUID канала продаж в МойСклад (Настройки → Каналы продаж). Оставьте пустым, чтобы не указывать.</p>
+						</td>
+					</tr>
 				</table>
 				</div></div>
 
@@ -1000,6 +1009,9 @@ class WC_MS_Admin {
 							<label><input type="checkbox" name="<?php echo esc_attr( WC_MoySklad_Sync::OPT_ADD_SHIPPING ); ?>" value="1" <?php checked( $add_shipping, '1' ); ?> /> Добавлять отдельной позицией стоимость доставки WooCommerce как <strong>услугу</strong> в МойСклад</label>
 							<p><label for="wc_ms_shipping_service">UUID услуги доставки в МС</label><br />
 							<input type="text" id="wc_ms_shipping_service" name="<?php echo esc_attr( WC_MoySklad_Sync::OPT_SHIPPING_SERVICE_ID ); ?>" value="<?php echo esc_attr( $shipping_service_id ); ?>" class="large-text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></p>
+							<p><label for="wc_ms_shipping_markup">Наценка на доставку, %</label><br />
+							<input type="number" id="wc_ms_shipping_markup" name="<?php echo esc_attr( WC_MoySklad_Sync::OPT_SHIPPING_MARKUP ); ?>" value="<?php echo esc_attr( $shipping_markup ); ?>" class="small-text" min="0" max="999" step="1" />
+							<span class="description">По умолчанию 22%. Стоимость доставки в МС = стоимость из заказа + наценка.</span></p>
 						</td>
 					</tr>
 				</table>
@@ -1183,6 +1195,8 @@ class WC_MS_Admin {
 			WC_MoySklad_Sync::OPT_DEBUG        => 'checkbox',
 			WC_MoySklad_Sync::OPT_ADD_SHIPPING         => 'checkbox',
 			WC_MoySklad_Sync::OPT_SHIPPING_SERVICE_ID  => 'text',
+			// OPT_SHIPPING_MARKUP сохраняется отдельно с валидацией ниже
+			WC_MoySklad_Sync::OPT_SALES_CHANNEL_ID     => 'text',
 			WC_MoySklad_Sync::OPT_RESERVE_ON_CREATE => 'checkbox',
 			WC_MoySklad_Sync::OPT_ORDER_APPLICABLE => 'checkbox',
 			WC_MoySklad_Sync::OPT_NOTE_LABEL   => 'text',
@@ -1195,6 +1209,11 @@ class WC_MS_Admin {
 				update_option( $key, isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '' );
 			}
 		}
+
+		$shipping_markup_raw = isset( $_POST[ WC_MoySklad_Sync::OPT_SHIPPING_MARKUP ] )
+			? (float) sanitize_text_field( wp_unslash( $_POST[ WC_MoySklad_Sync::OPT_SHIPPING_MARKUP ] ) )
+			: 22.0;
+		update_option( WC_MoySklad_Sync::OPT_SHIPPING_MARKUP, (string) max( 0, min( 999, $shipping_markup_raw ) ) );
 
 		$agent_style = isset( $_POST[ WC_MoySklad_Sync::OPT_AGENT_NAME_STYLE ] ) ? sanitize_text_field( wp_unslash( $_POST[ WC_MoySklad_Sync::OPT_AGENT_NAME_STYLE ] ) ) : 'first_last';
 		$allowed_ag  = array( 'first_last', 'last_first', 'company_or_fio' );

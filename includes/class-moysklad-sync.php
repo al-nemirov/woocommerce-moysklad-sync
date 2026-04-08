@@ -36,6 +36,8 @@ class WC_MoySklad_Sync {
 	const OPT_FIXED_COUNTERPARTY_ID = 'wc_ms_fixed_counterparty_id';
 	const OPT_SYNC_TRIGGER   = 'wc_ms_sync_trigger';
 	const OPT_SYNC_CRON_SCHED = 'wc_ms_sync_cron_sched';
+	const OPT_SHIPPING_MARKUP = 'wc_ms_shipping_markup';
+	const OPT_SALES_CHANNEL_ID = 'wc_ms_sales_channel_id';
 
 	const CRON_HOOK = 'wc_ms_cron_sync_orders';
 

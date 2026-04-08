@@ -131,9 +131,11 @@ class WC_MS_Order {
 				if ( $ship_svc === '' ) {
 					return new WP_Error( 'ms_shipping_service', 'Включена строка доставки в заказ МС: укажите UUID услуги доставки в настройках плагина.' );
 				}
+				$shipping_markup = (float) get_option( WC_MoySklad_Sync::OPT_SHIPPING_MARKUP, '22' );
+				$shipping_price  = $shipping_total * ( 1 + $shipping_markup / 100 );
 				$positions[] = array(
 					'quantity'   => 1,
-					'price'      => self::price_to_cents( $shipping_total ),
+					'price'      => self::price_to_cents( $shipping_price ),
 					'assortment' => array( 'meta' => self::make_meta( 'entity/service/' . $ship_svc, 'service' ) ),
 				);
 			}
@@ -157,6 +159,11 @@ class WC_MS_Order {
 		$state_id = get_option( WC_MoySklad_Sync::OPT_MS_STATE_ID, '' );
 		if ( $state_id ) {
 			$body['state'] = array( 'meta' => self::make_meta( 'entity/customerorder/metadata/states/' . $state_id, 'state' ) );
+		}
+
+		$channel_id = get_option( WC_MoySklad_Sync::OPT_SALES_CHANNEL_ID, '' );
+		if ( $channel_id ) {
+			$body['salesChannel'] = array( 'meta' => self::make_meta( 'entity/saleschannel/' . $channel_id, 'saleschannel' ) );
 		}
 
 		return $body;
@@ -326,7 +333,9 @@ class WC_MS_Order {
 			if ( $quantity < 1 ) {
 				continue;
 			}
-			$price = self::price_to_cents( ( (float) $item->get_subtotal() + (float) $item->get_subtotal_tax() ) / $quantity );
+			// Берём цену из заказа — уже с учётом всех скидок/наценок (в т.ч. wc-dynamic-price-modifier)
+			$price_rub = ( (float) $item->get_subtotal() + (float) $item->get_subtotal_tax() ) / $quantity;
+			$price     = self::price_to_cents( $price_rub );
 
 			$meta = null;
 			if ( $product ) {
@@ -425,7 +434,7 @@ class WC_MS_Order {
 	}
 
 	public static function price_to_cents( $price ) {
-		return (int) round( (float) $price * 100 );
+		return (int) round( (float) $price * 100, 0, PHP_ROUND_HALF_UP );
 	}
 
 	/**
