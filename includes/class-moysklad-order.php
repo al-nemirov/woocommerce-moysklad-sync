@@ -113,6 +113,9 @@ class WC_MS_Order {
 		if ( is_wp_error( $agent_meta ) ) {
 			return new WP_Error( 'ms_agent', 'Контрагент: ' . $agent_meta->get_error_message() );
 		}
+		if ( ! $agent_meta || ! is_array( $agent_meta ) ) {
+			return new WP_Error( 'ms_agent', 'Не удалось получить или создать контрагента в МойСклад.' );
+		}
 
 		$reserve_on = get_option( WC_MoySklad_Sync::OPT_RESERVE_ON_CREATE, '0' ) === '1';
 		if ( $reserve_on && trim( (string) get_option( WC_MoySklad_Sync::OPT_STORE_ID, '' ) ) === '' ) {
@@ -333,24 +336,38 @@ class WC_MS_Order {
 			if ( $quantity < 1 ) {
 				continue;
 			}
+
+			if ( ! $product ) {
+				error_log( sprintf(
+					'[WC MoyS] Order #%s: товар #%d удалён из WC — позиция пропущена.',
+					$order->get_order_number(),
+					$item->get_product_id()
+				) );
+				continue;
+			}
+
 			// Берём цену из заказа — уже с учётом всех скидок/наценок (в т.ч. wc-dynamic-price-modifier)
 			$price_rub = ( (float) $item->get_subtotal() + (float) $item->get_subtotal_tax() ) / $quantity;
 			$price     = self::price_to_cents( $price_rub );
 
 			$meta = null;
-			if ( $product ) {
-				$sku = $product->get_sku();
-				if ( $sku !== '' ) {
-					$found = $api->find_product_by_article( $sku );
-					if ( $found && ! empty( $found['meta'] ) ) {
-						$meta = $found['meta'];
-					}
+			$sku  = $product->get_sku();
+			if ( $sku !== '' ) {
+				$found = $api->find_product_by_article( $sku );
+				if ( $found && ! empty( $found['meta'] ) ) {
+					$meta = $found['meta'];
 				}
 			}
 			if ( ! $meta && $default_product_id !== '' ) {
 				$meta = self::make_meta( 'entity/product/' . $default_product_id, 'product' );
 			}
 			if ( ! $meta ) {
+				error_log( sprintf(
+					'[WC MoyS] Order #%s: товар «%s» (SKU: %s) не найден в МойСклад — позиция пропущена.',
+					$order->get_order_number(),
+					$product->get_name(),
+					$sku ?: 'нет'
+				) );
 				continue;
 			}
 			$pos = array(
