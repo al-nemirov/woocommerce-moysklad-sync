@@ -54,6 +54,10 @@ class WC_MoySklad_Sync {
 		require_once __DIR__ . '/class-moysklad-webhook.php';
 		require_once __DIR__ . '/class-moysklad-admin.php';
 
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			require_once __DIR__ . '/class-moysklad-cli.php';
+		}
+
 		add_filter( 'http_request_args', array( 'WC_MS_API', 'enforce_moysklad_headers' ), 99999, 2 );
 
 		// WC хуки

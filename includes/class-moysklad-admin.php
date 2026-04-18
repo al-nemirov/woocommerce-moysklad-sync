@@ -669,7 +669,7 @@ class WC_MS_Admin {
 								</td>
 								<td style="width:240px;padding:10px;">
 									<strong style="display:block;margin-bottom:4px;"><?php echo esc_html( $row['short_desc'] ); ?></strong>
-									<span class="dashicons dashicons-info" style="color:#0073aa;cursor:help;font-size:16px;width:auto;height:auto;" title="<?php echo esc_attr( $row['full_desc'] ); ?>" onclick="alert('<?php echo esc_attr( $row['full_desc'] ); ?>')"></span>
+									<span class="dashicons dashicons-info" style="color:#0073aa;cursor:help;font-size:16px;width:auto;height:auto;" title="<?php echo esc_attr( $row['full_desc'] ); ?>" onclick="alert('<?php echo esc_js( $row['full_desc'] ); ?>')"></span>
 								</td>
 								<td style="padding:10px;">
 									<span style="font-size:13px;word-break:break-word;color:#666;display:block;max-height:80px;overflow:auto;border-left:3px solid #ddd;padding-left:8px;background:#fafafa;">

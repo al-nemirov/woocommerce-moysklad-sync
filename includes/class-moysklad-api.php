@@ -306,10 +306,15 @@ class WC_MS_API {
 		}
 		$path = WP_CONTENT_DIR . '/wc-moysklad-sync-debug.log';
 		$line = gmdate( 'Y-m-d H:i:s' ) . ' [WC-MS] ' . $message . "\n";
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		if ( wp_is_writable( dirname( $path ) ) ) {
-			file_put_contents( $path, $line, FILE_APPEND | LOCK_EX );
+		if ( ! wp_is_writable( dirname( $path ) ) ) {
+			return;
 		}
+		// Ротация: если файл > 2 МБ — переименуем в .1 (старый .1 перезапишется).
+		if ( file_exists( $path ) && @filesize( $path ) > 2 * 1024 * 1024 ) {
+			@rename( $path, $path . '.1' );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $path, $line, FILE_APPEND | LOCK_EX );
 	}
 
 	/* ── Организации ────────────────────────────────────────── */

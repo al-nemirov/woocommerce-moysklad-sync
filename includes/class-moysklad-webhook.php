@@ -33,7 +33,7 @@ class WC_MS_Webhook {
 			return new WP_REST_Response( array( 'error' => 'Webhook secret not configured' ), 403 );
 		}
 		$provided = (string) $request->get_param( 'secret' );
-		if ( $provided === '' || $provided !== $secret ) {
+		if ( $provided === '' || ! hash_equals( (string) $secret, $provided ) ) {
 			return new WP_REST_Response( array( 'error' => 'Invalid secret' ), 403 );
 		}
 
