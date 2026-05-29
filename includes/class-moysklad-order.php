@@ -135,7 +135,7 @@ class WC_MS_Order {
 					return new WP_Error( 'ms_shipping_service', 'Включена строка доставки в заказ МС: укажите UUID услуги доставки в настройках плагина.' );
 				}
 				$shipping_markup = (float) get_option( WC_MoySklad_Sync::OPT_SHIPPING_MARKUP, '22' );
-				$shipping_price  = $shipping_total * ( 1 + $shipping_markup / 100 );
+				$shipping_price  = self::round_price_rub( $shipping_total * ( 1 + $shipping_markup / 100 ) );
 				$positions[] = array(
 					'quantity'   => 1,
 					'price'      => self::price_to_cents( $shipping_price ),
@@ -346,8 +346,14 @@ class WC_MS_Order {
 				continue;
 			}
 
-			// Берём цену из заказа — уже с учётом всех скидок/наценок (в т.ч. wc-dynamic-price-modifier)
-			$price_rub = ( (float) $item->get_subtotal() + (float) $item->get_subtotal_tax() ) / $quantity;
+			// Цена из заказа с учётом всех скидок/наценок.
+			// get_total() = сумма позиции ПОСЛЕ купонов (в отличие от get_subtotal()),
+			// при этом для wc-dynamic-price-modifier совпадает с subtotal — поэтому
+			// корректно отражает то, что реально платит покупатель (вкл. купон RODINA2026).
+			$price_rub = ( (float) $item->get_total() + (float) $item->get_total_tax() ) / $quantity;
+			// Округляем до целого рубля, как показывает сайт (wc_get_price_decimals() = 0),
+			// чтобы в МС не уходили копейки (789.30) при отображаемой цене 789.
+			$price_rub = self::round_price_rub( $price_rub );
 			$price     = self::price_to_cents( $price_rub );
 
 			$meta = null;
@@ -452,6 +458,23 @@ class WC_MS_Order {
 
 	public static function price_to_cents( $price ) {
 		return (int) round( (float) $price * 100, 0, PHP_ROUND_HALF_UP );
+	}
+
+	/**
+	 * Округлить рублёвую цену до числа знаков из настроек WooCommerce
+	 * (Магазин → Валюта → «Число десятичных знаков»). Для rodina-kniga = 0,
+	 * поэтому в МойСклад уходит цена в целых рублях — так же, как её видит
+	 * покупатель на сайте.
+	 *
+	 * @param float $price_rub Цена в рублях.
+	 * @return float
+	 */
+	public static function round_price_rub( $price_rub ) {
+		$decimals = function_exists( 'wc_get_price_decimals' ) ? (int) wc_get_price_decimals() : 2;
+		if ( $decimals < 0 ) {
+			$decimals = 0;
+		}
+		return round( (float) $price_rub, $decimals );
 	}
 
 	/**
